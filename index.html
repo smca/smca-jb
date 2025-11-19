@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Private Demo</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        button, input, select, textarea { font-family: inherit; }
+
+        /* Password overlay */
+        #auth-overlay {
+            position: fixed;
+            inset: 0;
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        #auth-overlay.hidden { display: none; }
+        .auth-form {
+            text-align: center;
+        }
+        .auth-title {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 32px;
+            letter-spacing: 0.5px;
+        }
+        .auth-input {
+            display: block;
+            padding: 14px 20px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            width: 240px;
+            text-align: center;
+            background: white;
+            margin-bottom: 12px;
+        }
+        .auth-input:focus { outline: none; border-color: #999; }
+        .auth-input.error { border-color: #c44; animation: shake 0.3s ease; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+        .auth-button {
+            padding: 14px 32px;
+            font-size: 14px;
+            font-weight: 500;
+            background: #1a1a1a;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .auth-button:hover { background: #333; }
+        .auth-error { font-size: 13px; color: #c44; margin-top: 12px; height: 20px; }
+
+        /* App styles */
+        :root {
+            --bg-primary: #f5f0e8;
+            --bg-secondary: #fff;
+            --bg-tertiary: #ebe5db;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666;
+            --text-tertiary: #999;
+            --border: #e0dbd3;
+            --accent: #2d5a5a;
+            --accent-light: rgba(45, 90, 90, 0.1);
+            --positive: #2d6a4f;
+            --positive-light: rgba(45, 106, 79, 0.08);
+            --negative: #8b3a3a;
+            --negative-light: rgba(139, 58, 58, 0.08);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            color: var(--text-primary);
+            font-size: 15px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .entry-app { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; }
+        .content-panel { display: flex; flex-direction: column; min-height: 100vh; }
+        .visual-panel { background: var(--accent); position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .visual-panel::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.1) 0%, transparent 40%), radial-gradient(circle at 70% 80%, rgba(0,0,0,0.2) 0%, transparent 40%); }
+        .visual-panel::after { content: ''; position: absolute; width: 300px; height: 300px; background: rgba(255,255,255,0.08); border-radius: 50%; filter: blur(60px); animation: floatBlur 8s ease-in-out infinite; }
+        @keyframes floatBlur { 0%, 100% { transform: translate(-20%, -20%); } 50% { transform: translate(20%, 20%); } }
+        .visual-content { position: relative; text-align: center; color: rgba(255,255,255,0.9); padding: 48px; }
+        .visual-stat { font-family: 'Instrument Serif', Georgia, serif; font-size: clamp(80px, 15vw, 140px); line-height: 0.9; letter-spacing: -4px; margin-bottom: 16px; }
+        .visual-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.7; }
+        .visual-fragments { position: absolute; inset: 0; overflow: hidden; }
+        .fragment { position: absolute; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: rgba(255,255,255,0.4); padding: 8px 12px; background: rgba(255,255,255,0.08); border-radius: 4px; white-space: nowrap; animation: fragmentFloat 20s ease-in-out infinite; }
+        .fragment:nth-child(1) { top: 8%; left: 8%; } .fragment:nth-child(2) { top: 18%; right: 12%; animation-delay: -2s; } .fragment:nth-child(3) { top: 32%; left: 5%; animation-delay: -4s; } .fragment:nth-child(4) { top: 28%; right: 8%; animation-delay: -6s; } .fragment:nth-child(5) { top: 48%; left: 12%; animation-delay: -8s; } .fragment:nth-child(6) { top: 52%; right: 15%; animation-delay: -10s; } .fragment:nth-child(7) { top: 65%; left: 6%; animation-delay: -12s; } .fragment:nth-child(8) { top: 70%; right: 10%; animation-delay: -14s; }
+        .fragment.highlight { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); }
+        @keyframes fragmentFloat { 0%, 100% { transform: translate(0, 0); opacity: 0.4; } 50% { transform: translate(5px, 5px); opacity: 0.6; } }
+        .visual-home-content { position: relative; z-index: 1; text-align: center; }
+        .visual-home-stat { font-family: 'Instrument Serif', Georgia, serif; font-size: clamp(100px, 20vw, 180px); line-height: 0.85; letter-spacing: -6px; color: rgba(255,255,255,0.95); margin-bottom: 16px; }
+        .visual-home-label { font-size: 14px; color: rgba(255,255,255,0.6); max-width: 200px; margin: 0 auto; line-height: 1.4; }
+        .header { padding: 32px 32px 0; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-family: 'Instrument Serif', Georgia, serif; font-size: 20px; cursor: pointer; }
+        .step-indicator { display: flex; gap: 6px; }
+        .step-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: all 0.3s; }
+        .step-dot.active { background: var(--accent); transform: scale(1.3); }
+        .step-dot.completed { background: var(--text-tertiary); }
+        .main { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 48px; max-width: 520px; }
+        .step-content { animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .hero-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 24px; }
+        .hero-title { font-family: 'Instrument Serif', Georgia, serif; font-size: clamp(48px, 12vw, 64px); line-height: 1.0; letter-spacing: -2px; margin-bottom: 24px; }
+        .hero-title em { font-style: italic; color: var(--accent); }
+        .hero-subtitle { font-size: 16px; color: var(--text-secondary); max-width: 380px; line-height: 1.6; margin-bottom: 48px; }
+        .btn { padding: 12px 24px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--bg-secondary); color: var(--text-primary); transition: all 0.15s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn:hover { background: var(--bg-tertiary); }
+        .btn-primary { background: var(--text-primary); border-color: var(--text-primary); color: var(--bg-primary); }
+        .btn-primary:hover { background: var(--text-secondary); border-color: var(--text-secondary); }
+        .trust-footer { padding: 24px 32px; display: flex; justify-content: center; gap: 32px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-tertiary); }
+        .trust-item { display: inline-flex; align-items: center; gap: 6px; }
+        .trust-item svg { width: 12px; height: 12px; opacity: 0.7; }
+        .section-number { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-tertiary); margin-bottom: 16px; }
+        .section-title { font-family: 'Instrument Serif', Georgia, serif; font-size: 32px; letter-spacing: -1px; margin-bottom: 8px; }
+        .section-subtitle { font-size: 15px; color: var(--text-secondary); margin-bottom: 32px; line-height: 1.6; }
+        .connect-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 32px; }
+        .connect-item { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .connect-item:hover { border-color: var(--text-tertiary); }
+        .connect-item.connected { background: var(--positive-light); border-color: var(--positive); }
+        .connect-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        .connect-item.connected .connect-icon { background: var(--positive); color: white; }
+        .connect-info { flex: 1; }
+        .connect-name { font-weight: 500; font-size: 14px; margin-bottom: 2px; }
+        .connect-desc { font-size: 13px; color: var(--text-tertiary); }
+        .connect-check { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; }
+        .connect-item.connected .connect-check { background: var(--positive); border-color: var(--positive); color: white; }
+        .connect-check svg { width: 12px; height: 12px; opacity: 0; }
+        .connect-item.connected .connect-check svg { opacity: 1; }
+        .skip-text { font-size: 12px; color: var(--text-tertiary); margin-top: 16px; }
+        .skip-text a { color: var(--text-secondary); cursor: pointer; }
+        .question-category { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .question-category::before { content: ''; width: 16px; height: 1px; background: var(--accent); }
+        .question-text { font-family: 'Instrument Serif', Georgia, serif; font-size: clamp(32px, 8vw, 40px); line-height: 1.15; letter-spacing: -1px; margin-bottom: 40px; }
+        .choices-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 32px; }
+        .choice-card { padding: 24px 20px; background: var(--bg-secondary); border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.15s; text-align: center; }
+        .choice-card:hover { border-color: var(--text-tertiary); transform: translateY(-2px); }
+        .choice-card.selected { background: var(--text-primary); color: var(--bg-primary); border-color: var(--text-primary); }
+        .choice-label { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+        .choice-sub { font-size: 12px; opacity: 0.5; }
+        .score-ring { position: relative; width: 220px; height: 220px; display: flex; align-items: center; justify-content: center; }
+        .score-ring svg { position: absolute; width: 100%; height: 100%; transform: rotate(-90deg); }
+        .score-ring-bg { fill: none; stroke: var(--border); stroke-width: 6; }
+        .score-ring-fill { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; stroke-dasharray: 565; stroke-dashoffset: 565; animation: scoreReveal 1.5s ease-out forwards 0.3s; }
+        .score-ring-fill.good { stroke: var(--positive); }
+        @keyframes scoreReveal { to { stroke-dashoffset: var(--score-offset); } }
+        .score-inner { display: flex; flex-direction: column; align-items: center; }
+        .score-value { font-family: 'Instrument Serif', Georgia, serif; font-size: 72px; line-height: 1; }
+        .score-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--text-tertiary); margin-top: 8px; }
+        .insight-box { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; margin-bottom: 24px; width: 100%; }
+        .insight-title { font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+        .insight-text { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+        .unlock-section { background: var(--text-primary); color: var(--bg-primary); border-radius: 16px; padding: 32px; margin-bottom: 24px; position: relative; overflow: hidden; width: 100%; }
+        .unlock-section::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 20% 20%, rgba(45, 90, 90, 0.3) 0%, transparent 50%); }
+        .unlock-content { position: relative; }
+        .unlock-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.5; margin-bottom: 12px; }
+        .unlock-title { font-family: 'Instrument Serif', Georgia, serif; font-size: 24px; margin-bottom: 8px; }
+        .unlock-text { font-size: 14px; opacity: 0.7; margin-bottom: 20px; line-height: 1.5; }
+        .unlock-btn { background: var(--bg-primary); color: var(--text-primary); border: none; padding: 14px 28px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .unlock-btn:hover { transform: translateY(-2px); }
+        .back-link { font-size: 12px; color: var(--text-tertiary); cursor: pointer; margin-bottom: 24px; display: inline-block; }
+        .back-link:hover { color: var(--text-primary); }
+        .dashboard { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+        .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+        .dash-header-left { display: flex; align-items: center; gap: 32px; }
+        .dash-logo { font-family: 'Instrument Serif', Georgia, serif; font-size: 28px; cursor: pointer; }
+        .header-nav { display: flex; gap: 6px; }
+        .nav-item { font-size: 14px; padding: 8px 14px; border-radius: 8px; color: var(--text-secondary); cursor: pointer; border: none; background: none; font-weight: 500; }
+        .nav-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+        .nav-item.active { background: var(--text-primary); color: var(--bg-primary); }
+        .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+        .stat-label { font-size: 12px; color: var(--text-tertiary); margin-bottom: 8px; }
+        .stat-value { font-family: 'Instrument Serif', Georgia, serif; font-size: 32px; margin-bottom: 8px; }
+        .stat-context { font-size: 13px; color: var(--text-secondary); }
+        .badge { display: inline-flex; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+        .badge.good { background: var(--positive-light); color: var(--positive); }
+        .badge.fair { background: var(--accent-light); color: var(--accent); }
+        .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; }
+        .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; }
+        .card-title { font-family: 'Instrument Serif', Georgia, serif; font-size: 18px; }
+        .card-subtitle { font-size: 13px; color: var(--text-tertiary); margin-top: 2px; }
+        .card-content { padding: 20px; }
+        .tools-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+        .tool-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 24px; cursor: pointer; }
+        .tool-card:hover { border-color: var(--text-tertiary); transform: translateY(-2px); }
+        .tool-icon { width: 48px; height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+        .tool-icon.scanner { background: var(--negative-light); color: var(--negative); }
+        .tool-icon.simulator { background: var(--accent-light); color: var(--accent); }
+        .tool-icon.ratecheck { background: var(--positive-light); color: var(--positive); }
+        .tool-name { font-family: 'Instrument Serif', Georgia, serif; font-size: 16px; margin-bottom: 6px; }
+        .tool-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+        .contract-list { display: flex; flex-direction: column; }
+        .contract-item { padding: 14px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .contract-item:last-child { border-bottom: none; }
+        .contract-name { font-family: 'Instrument Serif', Georgia, serif; font-size: 15px; margin-bottom: 2px; }
+        .contract-meta { font-size: 13px; color: var(--text-tertiary); }
+        .contract-health { width: 60px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+        .contract-health-fill { height: 100%; border-radius: 2px; }
+        .contract-health-fill.good { background: var(--positive); }
+        .contract-health-fill.fair { background: var(--accent); }
+
+        @media (max-width: 900px) { .entry-app { grid-template-columns: 1fr; } .visual-panel { display: none; } .main-grid, .tools-grid { grid-template-columns: 1fr; } .stats-row { grid-template-columns: 1fr; } }
+        @media (max-width: 600px) { .header { padding: 24px 20px 0; } .main { padding: 32px 20px; } .trust-footer { flex-direction: column; gap: 8px; } .choices-grid { grid-template-columns: 1fr; } .dashboard { padding: 16px 12px; } .dash-header { flex-direction: column; gap: 12px; } .dash-header-left { flex-direction: column; gap: 12px; align-items: flex-start; } }
+    </style>
+</head>
+<body>
+    <!-- Password overlay -->
+    <div id="auth-overlay">
+        <form class="auth-form" onsubmit="return checkPassword(event)">
+            <div class="auth-title">Private demo</div>
+            <input type="password" class="auth-input" id="pwd" placeholder="Password" autocomplete="off" autofocus>
+            <button type="submit" class="auth-button">Enter</button>
+            <div class="auth-error" id="error"></div>
+        </form>
+    </div>
+
+    <div id="root"></div>
+
+    <script>
+        // Simple password check - change 'demo2024' to your password
+        function checkPassword(e) {
+            e.preventDefault();
+            const input = document.getElementById('pwd');
+            if (input.value === 'demo2024') {
+                document.getElementById('auth-overlay').classList.add('hidden');
+            } else {
+                input.classList.add('error');
+                document.getElementById('error').textContent = 'Incorrect password';
+                setTimeout(() => input.classList.remove('error'), 300);
+            }
+            return false;
+        }
+    </script>
+
+    <script type="text/babel">
+        const { useState } = React;
+        const dashboardData = { revenue: 12847, percentile: 78, streamRate: 0.0038, contracts: [{ name: 'Sony Music Publishing', type: 'Sync license', health: 85 }, { name: 'Distribution Agreement', type: 'Label services', health: 62 }, { name: 'Nike Partnership', type: 'Brand deal', health: 91 }] };
+
+        function App() {
+            const [appMode, setAppMode] = useState('entry');
+            const [step, setStep] = useState('home');
+            const [connected, setConnected] = useState([]);
+            const [questionIdx, setQuestionIdx] = useState(0);
+            const [answers, setAnswers] = useState({});
+            const [selectedChoice, setSelectedChoice] = useState(null);
+            const [activeTab, setActiveTab] = useState('dashboard');
+
+            const questions = [
+                { id: 'listeners', category: 'Your reach', question: 'How many monthly listeners do you have?', choices: [{ value: 'under10k', label: 'Under 10K', sub: 'Building' }, { value: '10k-50k', label: '10K-50K', sub: 'Growing' }, { value: '50k-250k', label: '50K-250K', sub: 'Solid' }, { value: 'over250k', label: '250K+', sub: 'Major' }] },
+                { id: 'distributor', category: 'Distribution', question: 'Who distributes your music?', choices: [{ value: 'distrokid', label: 'DistroKid', sub: '0% cut' }, { value: 'tunecore', label: 'TuneCore', sub: 'Flat fee' }, { value: 'cdbaby', label: 'CD Baby', sub: '9% cut' }, { value: 'other', label: 'Other', sub: 'Varies' }] },
+                { id: 'masters', category: 'Ownership', question: 'Do you own your masters?', choices: [{ value: 'yes', label: 'Yes, 100%', sub: 'Full' }, { value: 'partial', label: 'Partial', sub: 'Split' }, { value: 'no', label: 'No', sub: 'Label' }, { value: 'unsure', label: 'Not sure', sub: 'Check' }] },
+                { id: 'income', category: 'Revenue', question: "What's your main income source?", choices: [{ value: 'streaming', label: 'Streaming', sub: 'Spotify' }, { value: 'sync', label: 'Sync', sub: 'TV/Film' }, { value: 'live', label: 'Live', sub: 'Shows' }, { value: 'mixed', label: 'Mixed', sub: 'Diverse' }] }
+            ];
+
+            const calculateScore = () => { let s = 50; if (answers.masters === 'yes') s += 20; else if (answers.masters === 'partial') s += 10; else if (answers.masters === 'no') s -= 10; if (answers.distributor === 'distrokid') s += 10; if (answers.income === 'mixed') s += 10; else if (answers.income === 'streaming') s -= 5; return Math.max(0, Math.min(100, s)); };
+            const handleConnect = (p) => { if (connected.includes(p)) setConnected(connected.filter(x => x !== p)); else setConnected([...connected, p]); };
+            const handleAnswer = (v) => { setSelectedChoice(v); setTimeout(() => { setAnswers({ ...answers, [questions[questionIdx].id]: v }); setSelectedChoice(null); if (questionIdx < questions.length - 1) setQuestionIdx(questionIdx + 1); else setStep('results'); }, 400); };
+            const currentStep = step === 'home' ? 0 : step === 'connect' ? 1 : step === 'questions' ? 2 : 3;
+            const getVisualContent = () => { if (step === 'home') return { type: 'home' }; if (step === 'connect') return { stat: '2m', label: 'To complete', type: 'stat' }; if (step === 'questions') return { stat: (questionIdx + 1) + '/4', label: 'Questions', type: 'stat' }; if (step === 'results') return { type: 'score' }; return { stat: '10K+', label: 'Artists', type: 'stat' }; };
+            const visualContent = getVisualContent();
+
+            if (appMode === 'entry') {
+                return (
+                    <div className="entry-app">
+                        <div className="content-panel">
+                            <header className="header">
+                                <div className="logo" onClick={() => setStep('home')}>CEO</div>
+                                {step !== 'home' && <div className="step-indicator">{[0, 1, 2].map(i => <div key={i} className={'step-dot ' + (i < currentStep ? 'completed ' : '') + (i === currentStep - 1 ? 'active' : '')} />)}</div>}
+                            </header>
+                            <main className="main">
+                                {step === 'home' && <div className="step-content"><div className="hero-eyebrow">For independent artists</div><h1 className="hero-title">Know what<br />you're <em>worth</em><span style={{ color: 'var(--text-primary)' }}>.</span></h1><p className="hero-subtitle">Labels have all the data. Now you do too. See how your deals compare to thousands of artists at your level.</p><button className="btn btn-primary" onClick={() => setStep('connect')}>Get started <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button></div>}
+                                {step === 'connect' && <div className="step-content"><span className="back-link" onClick={() => setStep('home')}>← Back</span><div className="section-number">01</div><h2 className="section-title">Connect your data</h2><p className="section-subtitle">We'll pull your streaming stats automatically.</p><div className="connect-list">{[{ id: 'spotify', name: 'Spotify for Artists', desc: 'Streams, earnings', icon: '♪' }, { id: 'apple', name: 'Apple Music', desc: 'Plays, radio', icon: '♫' }, { id: 'distrokid', name: 'Distributor', desc: 'Revenue, splits', icon: '◎' }].map(p => <div key={p.id} className={'connect-item ' + (connected.includes(p.id) ? 'connected' : '')} onClick={() => handleConnect(p.id)}><div className="connect-icon">{connected.includes(p.id) ? '✓' : p.icon}</div><div className="connect-info"><div className="connect-name">{p.name}</div><div className="connect-desc">{p.desc}</div></div><div className="connect-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg></div></div>)}</div><button className="btn btn-primary" onClick={() => setStep('questions')}>{connected.length > 0 ? 'Continue' : 'Continue without connecting'}</button><p className="skip-text" style={{ visibility: connected.length === 0 ? 'visible' : 'hidden' }}>You can also <a onClick={() => setStep('questions')}>enter data manually</a></p></div>}
+                                {step === 'questions' && <div className="step-content"><span className="back-link" onClick={() => questionIdx > 0 ? setQuestionIdx(questionIdx - 1) : setStep('connect')}>← Back</span><div className="question-category">{questions[questionIdx].category}</div><h2 className="question-text">{questions[questionIdx].question}</h2><div className="choices-grid">{questions[questionIdx].choices.map(c => <div key={c.value} className={'choice-card ' + (selectedChoice === c.value ? 'selected' : '')} onClick={() => handleAnswer(c.value)}><div className="choice-label">{c.label}</div><div className="choice-sub">{c.sub}</div></div>)}</div></div>}
+                                {step === 'results' && <div className="step-content"><h2 className="section-title" style={{ marginBottom: '16px' }}>Your deal health</h2><p className="section-subtitle" style={{ marginBottom: '32px' }}>Based on your answers, here's how you compare to other indie artists.</p><div className="insight-box"><div className="insight-title">What this means</div><div className="insight-text">Your score reflects ownership, revenue diversification, and deal terms. Artists who improve see 2-3× higher lifetime earnings.</div></div><div className="unlock-section"><div className="unlock-content"><div className="unlock-eyebrow">Go deeper</div><h3 className="unlock-title">See where you rank</h3><p className="unlock-text">Compare to thousands of artists. See what top earners do differently.</p><button className="unlock-btn" onClick={() => setAppMode('dashboard')}>Enter dashboard →</button></div></div></div>}
+                            </main>
+                            {step === 'home' && <footer className="trust-footer"><div className="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>100% anonymous</div><div className="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Data never sold</div><div className="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>10,000+ artists</div></footer>}
+                        </div>
+                        <div className="visual-panel">
+                            {visualContent.type === 'home' ? <><div className="visual-fragments">{[{ text: 'Masters: 0%' }, { text: '$0.003/stream', highlight: true }, { text: 'Term: Life+70' }, { text: '85% to label', highlight: true }, { text: 'No audit rights' }, { text: '360 deal', highlight: true }, { text: 'Publishing: 0%' }, { text: '7 album deal' }].map((f, i) => <div key={i} className={'fragment ' + (f.highlight ? 'highlight' : '')}>{f.text}</div>)}</div><div className="visual-home-content"><div className="visual-home-stat">34%</div><div className="visual-home-label">of indie artists are underpaid vs. their peers</div></div></> : visualContent.type === 'score' ? <div className="visual-content"><div className="score-ring" style={{ width: '280px', height: '280px' }}><svg viewBox="0 0 200 200"><circle className="score-ring-bg" cx="100" cy="100" r="90" /><circle className="score-ring-fill good" cx="100" cy="100" r="90" style={{ '--score-offset': 565 - (565 * calculateScore() / 100) }} /></svg><div className="score-inner" style={{ color: 'rgba(255,255,255,0.95)' }}><div className="score-value">{calculateScore()}</div><div className="score-label" style={{ color: 'rgba(255,255,255,0.6)' }}>DEAL SCORE</div></div></div></div> : <div className="visual-content"><div className="visual-stat">{visualContent.stat}</div><div className="visual-label">{visualContent.label}</div></div>}
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="dashboard">
+                    <header className="dash-header"><div className="dash-header-left"><div className="dash-logo" onClick={() => setAppMode('entry')}>CEO</div><nav className="header-nav">{['Dashboard', 'Contracts', 'Intel', 'Tools'].map(tab => <button key={tab} className={'nav-item ' + (activeTab === tab.toLowerCase() ? 'active' : '')} onClick={() => setActiveTab(tab.toLowerCase())}>{tab}</button>)}</nav></div></header>
+                    {activeTab === 'dashboard' && <><div className="stats-row"><div className="stat-card"><div className="stat-label">Monthly revenue</div><div className="stat-value">${dashboardData.revenue.toLocaleString()}</div><div className="stat-context"><span className="badge good">{dashboardData.percentile}th percentile</span></div></div><div className="stat-card"><div className="stat-label">Per-stream rate</div><div className="stat-value">${dashboardData.streamRate.toFixed(4)}</div><div className="stat-context"><span className="badge good">+15%</span> vs avg</div></div><div className="stat-card"><div className="stat-label">Contract health</div><div className="stat-value">Good</div><div className="stat-context"><span className="badge fair">1 needs review</span></div></div></div><div className="main-grid" style={{ marginBottom: '24px' }}><div className="card"><div className="card-header"><div><div className="card-title">Contracts</div><div className="card-subtitle">Review status</div></div></div><div className="card-content"><div className="contract-list">{dashboardData.contracts.map((c, i) => <div key={i} className="contract-item"><div><div className="contract-name">{c.name}</div><div className="contract-meta">{c.type}</div></div><div className="contract-health"><div className={'contract-health-fill ' + (c.health >= 80 ? 'good' : 'fair')} style={{ width: c.health + '%' }} /></div></div>)}</div></div></div><div className="card" style={{ background: 'var(--text-primary)', color: 'var(--bg-primary)', border: 'none' }}><div className="card-content" style={{ padding: '24px' }}><div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '10px', letterSpacing: '1px', opacity: 0.5, marginBottom: '16px' }}>INSIGHT</div><div style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: '24px', marginBottom: '16px', lineHeight: 1.2 }}>Your Berlin fans are waiting</div><div style={{ fontSize: '14px', opacity: 0.7, lineHeight: 1.6 }}>11% of streams from Berlin, but no shows since 2022. Similar artists average 2 shows/year.</div></div></div></div><div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '12px', color: 'var(--text-secondary)' }}>Tools</div><div className="tools-grid"><div className="tool-card" onClick={() => setActiveTab('tools')}><div className="tool-icon scanner"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div><div className="tool-name">Scan a contract</div><div className="tool-desc">Identify red flags</div></div><div className="tool-card" onClick={() => setActiveTab('tools')}><div className="tool-icon simulator"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></div><div className="tool-name">Model a deal</div><div className="tool-desc">See long-term impact</div></div><div className="tool-card" onClick={() => setActiveTab('tools')}><div className="tool-icon ratecheck"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg></div><div className="tool-name">Check rate</div><div className="tool-desc">Compare to peers</div></div></div></>}
+                    {activeTab !== 'dashboard' && <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--text-tertiary)' }}><div style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: '24px', marginBottom: '8px', color: 'var(--text-primary)' }}>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</div><div>Available in full demo.</div></div>}
+                    <footer style={{ marginTop: '48px', paddingTop: '24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center', gap: '24px', fontSize: '11px', color: 'var(--text-tertiary)' }}><span>All data anonymized</span><span>Never sold</span><span>10,000+ artists</span></footer>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
